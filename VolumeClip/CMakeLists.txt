@@ -4,7 +4,7 @@ project(VolumeClip)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "http://www.slicerigt.org")
+set(EXTENSION_HOMEPAGE "http://www.slicer.org/slicerWiki/index.php/Documentation/4.3/Extensions/VolumeClip")
 set(EXTENSION_CATEGORY "Segmentation")
 set(EXTENSION_CONTRIBUTORS "Andras Lasso, Matt Lougheed (PerkLab, Queen's University)")
 set(EXTENSION_DESCRIPTION "Clip volumes with surface models and ROI boxes")

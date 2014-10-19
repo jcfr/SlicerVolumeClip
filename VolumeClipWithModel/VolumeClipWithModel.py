@@ -148,6 +148,8 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     parameterNode = self.logic.getParameterNode()
     # Set parameter node (widget will observe it and also updates GUI)
     self.setAndObserveParameterNode(parameterNode)
+
+    self.setAndObserveClippingMarkupNode(self.clippingMarkupSelector.currentNode())
     
     self.addGUIObservers()
     
@@ -157,6 +159,9 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     self.updateApplyButtonState()
 
   def cleanup(self):
+    self.removeGUIObservers()
+    self.setAndObserveParameterNode(None)
+    self.setAndObserveClippingMarkupNode(None)
     pass
 
   def setAndObserveParameterNode(self, parameterNode):
@@ -205,6 +210,8 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
 
   def updateGUIFromParameterNode(self):
     parameterNode = self.getParameterNode()
+    if not parameterNode:
+      return
     for parameterName in self.valueEditWidgets:
       oldBlockSignalsState = self.valueEditWidgets[parameterName].blockSignals(True)
       widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()      
@@ -248,7 +255,17 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
         self.valueEditWidgets[parameterName].connect("clicked()", self.updateParameterNodeFromGUI)
     for parameterName in self.nodeSelectorWidgets:
       self.nodeSelectorWidgets[parameterName].connect("currentNodeIDChanged(QString)", self.updateParameterNodeFromGUI)
-    
+
+  def removeGUIObservers(self):
+    for parameterName in self.valueEditWidgets:
+      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()      
+      if widgetClassName=="QSpinBox":
+        self.valueEditWidgets[parameterName].disconnect("valueChanged(int)", self.updateParameterNodeFromGUI)
+      elif widgetClassName=="QCheckBox":
+        self.valueEditWidgets[parameterName].disconnect("clicked()", self.updateParameterNodeFromGUI)
+    for parameterName in self.nodeSelectorWidgets:
+      self.nodeSelectorWidgets[parameterName].disconnect("currentNodeIDChanged(QString)", self.updateParameterNodeFromGUI)
+      
   def updateApplyButtonState(self):
     if self.inputVolumeSelector.currentNode() and self.clippingModelSelector.currentNode() and self.outputVolumeSelector.currentNode():
       self.applyButton.enabled = True
@@ -365,15 +382,25 @@ class VolumeClipWithModelLogic(ScriptedLoadableModuleLogic):
     Update model to enclose all points in the input markup list
     """
     
+    # Delaunay triangulation is robust and creates nice smooth surfaces from a small number of points,
+    # however it can only generate convex surfaces robustly.
+    useDelaunay = True
+    
     # Create polydata point set from markup points
     
     points = vtk.vtkPoints()
     cellArray = vtk.vtkCellArray()
-
+    
     numberOfPoints = inputMarkup.GetNumberOfFiducials()
-    if numberOfPoints<3:
-      # Minimum 3 points required
-      return
+    
+    # Surface generation algorithms behave unpredictably when there are not enough points
+    # return if there are very few points
+    if useDelaunay:
+      if numberOfPoints<3:
+        return
+    else:
+      if numberOfPoints<10:
+        return
 
     points.SetNumberOfPoints(numberOfPoints)
     new_coord = [0.0, 0.0, 0.0]
@@ -390,20 +417,44 @@ class VolumeClipWithModelLogic(ScriptedLoadableModuleLogic):
     pointPolyData.SetLines(cellArray)
     pointPolyData.SetPoints(points)
 
-    # Create surface from point set
     
-    self.Delaunay = vtk.vtkDelaunay3D()
-    self.Delaunay.SetInputData(pointPolyData)
+    # Create surface from point set
 
-    self.SurfaceFilter = vtk.vtkDataSetSurfaceFilter()
-    self.SurfaceFilter.SetInputConnection(self.Delaunay.GetOutputPort())
+    if useDelaunay:
+          
+      delaunay = vtk.vtkDelaunay3D()
+      delaunay.SetInputData(pointPolyData)
 
-    self.Smoother = vtk.vtkButterflySubdivisionFilter()
-    self.Smoother.SetInputConnection(self.SurfaceFilter.GetOutputPort())
-    self.Smoother.SetNumberOfSubdivisions(3)
-    self.Smoother.Update()
+      surfaceFilter = vtk.vtkDataSetSurfaceFilter()
+      surfaceFilter.SetInputConnection(delaunay.GetOutputPort())
 
-    outputModel.SetPolyDataConnection(self.Smoother.GetOutputPort())
+      smoother = vtk.vtkButterflySubdivisionFilter()
+      smoother.SetInputConnection(surfaceFilter.GetOutputPort())
+      smoother.SetNumberOfSubdivisions(3)
+      smoother.Update()
+
+      outputModel.SetPolyDataConnection(smoother.GetOutputPort())
+      
+    else:
+      
+      surf = vtk.vtkSurfaceReconstructionFilter()
+      surf.SetInputData(pointPolyData)
+      surf.SetNeighborhoodSize(20)
+      surf.SetSampleSpacing(80) # lower value follows the small details more closely but more dense pointset is needed as input
+
+      cf = vtk.vtkContourFilter()
+      cf.SetInputConnection(surf.GetOutputPort())
+      cf.SetValue(0, 0.0)
+
+      # Sometimes the contouring algorithm can create a volume whose gradient
+      # vector and ordering of polygon (using the right hand rule) are
+      # inconsistent. vtkReverseSense cures this problem.
+      reverse = vtk.vtkReverseSense()
+      reverse.SetInputConnection(cf.GetOutputPort())
+      reverse.ReverseCellsOff()
+      reverse.ReverseNormalsOff()
+
+      outputModel.SetPolyDataConnection(reverse.GetOutputPort())
 
     # Create default model display node if does not exist yet
     if not outputModel.GetDisplayNode():

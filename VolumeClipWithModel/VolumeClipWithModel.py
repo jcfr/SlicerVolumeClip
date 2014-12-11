@@ -91,7 +91,7 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     self.clippingMarkupSelector.renameEnabled = True
     self.clippingMarkupSelector.baseName = "C"
     self.clippingMarkupSelector.setMRMLScene(slicer.mrmlScene)
-    self.clippingMarkupSelector.setToolTip("Select the markups that will define the clipping surface")
+    self.clippingMarkupSelector.setToolTip("If markups are selected then the clipping surface will be generated from the markup points. The surface is updated automatically when markups are moved.")
     parametersFormLayout.addRow("Clipping surface from markups: ", self.clippingMarkupSelector)
 
     #
@@ -267,10 +267,18 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
       self.nodeSelectorWidgets[parameterName].disconnect("currentNodeIDChanged(QString)", self.updateParameterNodeFromGUI)
       
   def updateApplyButtonState(self):
-    if self.inputVolumeSelector.currentNode() and self.clippingModelSelector.currentNode() and self.outputVolumeSelector.currentNode():
-      self.applyButton.enabled = True
+    if not self.inputVolumeSelector.currentNode():
+      self.applyButton.toolTip = "Input volume is required. Clip volume with surface model is disabled."
+      self.applyButton.enabled = False
+    elif not self.clippingModelSelector.currentNode():
+      self.applyButton.toolTip = "Clipping surface is required (create new model or select existing model). Clip volume with surface model is disabled."
+      self.applyButton.enabled = False
+    elif not self.outputVolumeSelector.currentNode():
+      self.applyButton.toolTip = "Output volume is required (create new volume or select existing volume). Clip volume with surface model is disabled."
+      self.applyButton.enabled = False
     else:
-      self.applyButton.enabled = False      
+      self.applyButton.toolTip = "Clip volume with surface model."
+      self.applyButton.enabled = True
       
   def onInputVolumeSelect(self, node):
     self.updateApplyButtonState()

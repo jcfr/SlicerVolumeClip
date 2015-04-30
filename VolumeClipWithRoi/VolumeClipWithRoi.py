@@ -1,4 +1,5 @@
 import os
+import string
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
@@ -14,9 +15,11 @@ class VolumeClipWithRoi(ScriptedLoadableModule):
     self.parent.categories = ["Segmentation"]
     self.parent.dependencies = []
     self.parent.contributors = ["Andras Lasso (Queen's University)"]
-    parent.helpText = string.Template("""
-Use this module to clip a volume with a ROI (fill with a constant value). It can be used for removing certain regions of a scalar or labelmap volume.
-""").substitute({ "a":parent.slicerWikiUrl, "b":slicer.app.majorVersion, "c":slicer.app.minorVersion })
+    self.parent.helpText = string.Template("""
+      Use this module to clip a volume with a ROI (fill with a constant value). It can be used for removing certain regions of a scalar or labelmap volume.
+      Please refer to <a href=\"$a/Documentation/Nightly/Extensions/VolumeClip\">the documentation</a>
+      """).substitute({ "a":parent.slicerWikiUrl, "b":slicer.app.majorVersion, "c":slicer.app.minorVersion })
+    # TODO: replace "Nightly" by "$b.$c" in release builds (preferably implement a mechanism that does this automatically)
     self.parent.acknowledgementText ="""
       This work is part of SparKit project, funded by Cancer Care Ontario (CCO)'s ACRU program and
       Ontario Consortium for Adaptive Interventions in Radiation Oncology (OCAIRO).

@@ -1,4 +1,5 @@
 import os
+import string
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
@@ -14,9 +15,11 @@ class VolumeClipWithModel(ScriptedLoadableModule):
     self.parent.categories = ["Segmentation"]
     self.parent.dependencies = []
     self.parent.contributors = ["Andras Lasso, Matt Lougheed (PerkLab, Queen's University)"]
-    self.parent.helpText = """
+    self.parent.helpText = string.Template("""
       Clip volume with a surface model. Optionally the surface model can be automatically generated from a set of sample markup points.
-      """
+      Please refer to <a href=\"$a/Documentation/Nightly/Extensions/VolumeClip\">the documentation</a>
+      """).substitute({ "a":parent.slicerWikiUrl, "b":slicer.app.majorVersion, "c":slicer.app.minorVersion })
+    # TODO: replace "Nightly" by "$b.$c" in release builds (preferably implement a mechanism that does this automatically)
     self.parent.acknowledgementText ="""
       This work is part of SparKit project, funded by Cancer Care Ontario (CCO)'s ACRU program and
       Ontario Consortium for Adaptive Interventions in Radiation Oncology (OCAIRO).

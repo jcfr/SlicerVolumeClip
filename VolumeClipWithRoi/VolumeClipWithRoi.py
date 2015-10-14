@@ -231,7 +231,12 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.logic.clipVolumeWithRoi(clippingRoi, inputVolume, fillValue, clipOutsideSurface, outputVolume)
     self.logic.showInSliceViewers(outputVolume, ["Red", "Yellow", "Green"])
     self.applyButton.text = "Apply"
-    outputVolume.SetAttribute("ClippedVolume", "1")
+    # Set subject hierarchy identifier and trigger update
+    outputVolume.SetAttribute("ClippedVolume", inputVolume.GetID())
+    outputShNode = slicer.vtkMRMLSubjectHierarchyNode.GetAssociatedSubjectHierarchyNode(outputVolume)
+    if outputShNode is not None:
+      outputShNode.Modified()
+    
 
 #
 # VolumeClipWithRoiLogic

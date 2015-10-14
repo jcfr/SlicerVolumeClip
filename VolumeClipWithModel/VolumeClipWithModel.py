@@ -309,7 +309,11 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     fillValue = self.fillValueEdit.value
     self.logic.clipVolumeWithModel(inputVolume, clippingModel, clipOutsideSurface, fillValue, outputVolume)
     self.logic.showInSliceViewers(outputVolume, ["Red", "Yellow", "Green"])
-    outputVolume.SetAttribute("ClippedVolume", "1")
+    # Set subject hierarchy identifier and trigger update
+    outputVolume.SetAttribute("ClippedVolume", inputVolume.GetID())
+    outputShNode = slicer.vtkMRMLSubjectHierarchyNode.GetAssociatedSubjectHierarchyNode(outputVolume)
+    if outputShNode is not None:
+      outputShNode.Modified()
 
 #
 # VolumeClipWithModelLogic

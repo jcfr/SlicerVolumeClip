@@ -4,6 +4,7 @@ set(VolumeClipSubjectHierarchyPlugins_PYTHON_SCRIPTS
   )
 
 set(VolumeClipSubjectHierarchyPlugins_PYTHON_RESOURCES
+  Resources/Icons/VolumeClip.png
   )
 
 ctkMacroCompilePythonScript(

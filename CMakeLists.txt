@@ -20,6 +20,7 @@ include(${Slicer_USE_FILE})
 # Extension modules
 add_subdirectory(VolumeClipWithModel)
 add_subdirectory(VolumeClipWithRoi)
+add_subdirectory(SubjectHierarchyPlugins)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------

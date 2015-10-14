@@ -3,6 +3,7 @@ import string
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
+from SubjectHierarchyPlugins import *
 
 #
 # VolumeClipWithRoi
@@ -38,6 +39,11 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
 
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
+
+    # Register subject hierarchy plugin
+    scriptedPlugin = slicer.qSlicerSubjectHierarchyScriptedPlugin(None)
+    scriptedPlugin.setPythonSource(VolumeClipSubjectHierarchyPlugin.filePath)
+
     # Instantiate and connect widgets ...
     
     #
@@ -189,7 +195,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
   def addGUIObservers(self):
     for parameterName in self.valueEditWidgets:
       widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()      
-      if widgetClassName=="QSpinBox" or widgetClassName=="QDoubleSpinBox":
+      if widgetClassName=="QSpinBox":
         self.valueEditWidgets[parameterName].connect("valueChanged(int)", self.updateParameterNodeFromGUI)
       if widgetClassName=="QDoubleSpinBox":
         self.valueEditWidgets[parameterName].connect("valueChanged(double)", self.updateParameterNodeFromGUI)
@@ -225,6 +231,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.logic.clipVolumeWithRoi(clippingRoi, inputVolume, fillValue, clipOutsideSurface, outputVolume)
     self.logic.showInSliceViewers(outputVolume, ["Red", "Yellow", "Green"])
     self.applyButton.text = "Apply"
+    outputVolume.SetAttribute("ClippedVolume", "1")
 
 #
 # VolumeClipWithRoiLogic

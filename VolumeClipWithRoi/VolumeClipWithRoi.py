@@ -3,7 +3,6 @@ import string
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
-from SubjectHierarchyPlugins import *
 
 #
 # VolumeClipWithRoi
@@ -39,10 +38,6 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
 
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
-
-    # Register subject hierarchy plugin
-    scriptedPlugin = slicer.qSlicerSubjectHierarchyScriptedPlugin(None)
-    scriptedPlugin.setPythonSource(VolumeClipSubjectHierarchyPlugin.filePath)
 
     # Instantiate and connect widgets ...
     
@@ -231,11 +226,6 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.logic.clipVolumeWithRoi(clippingRoi, inputVolume, fillValue, clipOutsideSurface, outputVolume)
     self.logic.showInSliceViewers(outputVolume, ["Red", "Yellow", "Green"])
     self.applyButton.text = "Apply"
-    # Set subject hierarchy identifier and trigger update
-    outputVolume.SetAttribute("ClippedVolume", inputVolume.GetID())
-    outputShNode = slicer.vtkMRMLSubjectHierarchyNode.GetAssociatedSubjectHierarchyNode(outputVolume)
-    if outputShNode is not None:
-      outputShNode.Modified()
     
 
 #

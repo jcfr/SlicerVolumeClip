@@ -111,7 +111,7 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     #
     self.fillOutsideValueEdit = qt.QSpinBox()
     self.fillOutsideValueEdit.setToolTip("Choose the voxel intensity that will be used to fill outside the clipped regions")
-    self.fillOutsideValueEdit.minimum = 0
+    self.fillOutsideValueEdit.minimum = -32768
     self.fillOutsideValueEdit.maximum = 65535
     self.fillOutsideValueEdit.value = 255
     parametersFormLayout.addRow("Outside Fill value: ", self.fillOutsideValueEdit)
@@ -129,7 +129,7 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     #
     self.fillInsideValueEdit = qt.QSpinBox()
     self.fillInsideValueEdit.setToolTip("Choose the voxel intensity that will be used to fill Inside the clipped regions")
-    self.fillInsideValueEdit.minimum = 0
+    self.fillInsideValueEdit.minimum = -32768
     self.fillInsideValueEdit.maximum = 65535
     self.fillInsideValueEdit.value = 255
     parametersFormLayout.addRow("Inside Fill value: ", self.fillInsideValueEdit)

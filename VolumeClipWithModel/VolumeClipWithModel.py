@@ -37,7 +37,7 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     self.parameterNode = None
     self.parameterNodeObserver = None
     self.clippingMarkupNode = None
-    self.clippingMarkupNodeObserver = None
+    self.clippingMarkupNodeObservers = []
 
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
@@ -203,16 +203,27 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     self.updateGUIFromParameterNode()
 
   def setAndObserveClippingMarkupNode(self, clippingMarkupNode):
-    if clippingMarkupNode == self.clippingMarkupNode and self.clippingMarkupNodeObserver:
+    if clippingMarkupNode == self.clippingMarkupNode and self.clippingMarkupNodeObservers:
       # no change and node is already observed
       return
     # Remove observer to old parameter node
-    if self.clippingMarkupNode and self.clippingMarkupNodeObserver:
-      self.clippingMarkupNode.RemoveObserver(self.clippingMarkupNodeObserver)
-      self.clippingMarkupNodeObserver = None
+    if self.clippingMarkupNode and self.clippingMarkupNodeObservers:
+      for observer in self.clippingMarkupNodeObservers:
+        self.clippingMarkupNode.RemoveObserver(observer)
+      self.clippingMarkupNodeObservers = []
     # Set and observe new parameter node
     self.clippingMarkupNode = clippingMarkupNode
     if self.clippingMarkupNode:
+      if (slicer.app.majorVersion >= 5) or (slicer.app.majorVersion >= 4 and slicer.app.minorVersion >= 11):
+        eventIds = [ vtk.vtkCommand.ModifiedEvent,
+          slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+          slicer.vtkMRMLMarkupsNode.PointAddedEvent,
+          slicer.vtkMRMLMarkupsNode.PointRemovedEvent ]
+      else:
+        eventIds = [ vtk.vtkCommand.ModifiedEvent ]
+      for eventId in eventIds:
+        self.clippingMarkupNodeObservers.append(self.clippingMarkupNode.AddObserver(eventId, self.onClippingMarkupNodeModified))
+
       self.clippingMarkupNodeObserver = self.clippingMarkupNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onClippingMarkupNodeModified)
     # Update GUI
     self.updateModelFromClippingMarkupNode()
@@ -231,13 +242,20 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
       return
     self.logic.updateModelFromMarkup(self.clippingMarkupNode, self.clippingModelSelector.currentNode())
 
+  def getClassName(self, widget):
+    import sys
+    if sys.version_info.major == 2:
+      return widget.metaObject().className()
+    else:
+      return widget.metaObject().getClassName()
+
   def updateGUIFromParameterNode(self):
     parameterNode = self.getParameterNode()
     if not parameterNode:
       return
     for parameterName in self.valueEditWidgets:
       oldBlockSignalsState = self.valueEditWidgets[parameterName].blockSignals(True)
-      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()
+      widgetClassName = self.getClassName(self.valueEditWidgets[parameterName])
       if widgetClassName=="QCheckBox":
         checked = (int(parameterNode.GetParameter(parameterName)) != 0)
         self.valueEditWidgets[parameterName].setChecked(checked)
@@ -255,7 +273,7 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
     parameterNode = self.getParameterNode()
     oldModifiedState = parameterNode.StartModify()
     for parameterName in self.valueEditWidgets:
-      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()
+      widgetClassName = self.getClassName(self.valueEditWidgets[parameterName])
       if widgetClassName=="QCheckBox":
         if self.valueEditWidgets[parameterName].checked:
           parameterNode.SetParameter(parameterName, "1")
@@ -271,7 +289,7 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
 
   def addGUIObservers(self):
     for parameterName in self.valueEditWidgets:
-      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()
+      widgetClassName = self.getClassName(self.valueEditWidgets[parameterName])
       if widgetClassName=="QSpinBox":
         self.valueEditWidgets[parameterName].connect("valueChanged(int)", self.updateParameterNodeFromGUI)
       elif widgetClassName=="QCheckBox":
@@ -281,7 +299,7 @@ class VolumeClipWithModelWidget(ScriptedLoadableModuleWidget):
 
   def removeGUIObservers(self):
     for parameterName in self.valueEditWidgets:
-      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()
+      widgetClassName = self.getClassName(self.valueEditWidgets[parameterName])
       if widgetClassName=="QSpinBox":
         self.valueEditWidgets[parameterName].disconnect("valueChanged(int)", self.updateParameterNodeFromGUI)
       elif widgetClassName=="QCheckBox":

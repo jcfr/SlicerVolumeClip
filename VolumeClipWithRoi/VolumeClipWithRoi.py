@@ -151,11 +151,18 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
   def onParameterNodeModified(self, observer, eventid):
     self.updateGUIFromParameterNode()
 
+  def getClassName(self, widget):
+    import sys
+    if sys.version_info.major == 2:
+      return widget.metaObject().className()
+    else:
+      return widget.metaObject().getClassName()
+
   def updateGUIFromParameterNode(self):
     parameterNode = self.getParameterNode()
     for parameterName in self.valueEditWidgets:
       oldBlockSignalsState = self.valueEditWidgets[parameterName].blockSignals(True)
-      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()      
+      widgetClassName = self.getClassName(self.valueEditWidgets[parameterName])
       if widgetClassName=="QCheckBox":
         checked = (int(parameterNode.GetParameter(parameterName)) != 0)
         self.valueEditWidgets[parameterName].setChecked(checked)
@@ -173,7 +180,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     parameterNode = self.getParameterNode()
     oldModifiedState = parameterNode.StartModify()
     for parameterName in self.valueEditWidgets:
-      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()      
+      widgetClassName = self.getClassName(self.valueEditWidgets[parameterName])
       if widgetClassName=="QCheckBox":
         if self.valueEditWidgets[parameterName].checked:
           parameterNode.SetParameter(parameterName, "1")
@@ -189,7 +196,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
 
   def addGUIObservers(self):
     for parameterName in self.valueEditWidgets:
-      widgetClassName = self.valueEditWidgets[parameterName].metaObject().className()      
+      widgetClassName = self.getClassName(self.valueEditWidgets[parameterName])
       if widgetClassName=="QSpinBox":
         self.valueEditWidgets[parameterName].connect("valueChanged(int)", self.updateParameterNodeFromGUI)
       if widgetClassName=="QDoubleSpinBox":

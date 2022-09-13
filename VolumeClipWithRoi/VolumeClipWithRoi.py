@@ -40,7 +40,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     ScriptedLoadableModuleWidget.setup(self)
 
     # Instantiate and connect widgets ...
-    
+
     #
     # Parameters Area
     #
@@ -62,12 +62,12 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.inputVolumeSelector.setMRMLScene( slicer.mrmlScene )
     self.inputVolumeSelector.setToolTip( "Pick the volume to clip" )
     parametersFormLayout.addRow(self.inputVolumeSelectorLabel, self.inputVolumeSelector)
-    
+
     # ROI selector
     self.clippingRoiSelectorLabel = qt.QLabel()
     self.clippingRoiSelectorLabel.setText( "Clipping ROI: " )
     self.clippingRoiSelector = slicer.qMRMLNodeComboBox()
-    self.clippingRoiSelector.nodeTypes = ( "vtkMRMLAnnotationROINode", "" )
+    self.clippingRoiSelector.nodeTypes = ["vtkMRMLMarkupsROINode", "vtkMRMLAnnotationROINode"]
     self.clippingRoiSelector.noneEnabled = False
     self.clippingRoiSelector.selectNodeUponCreation = True
     self.clippingRoiSelector.setMRMLScene( slicer.mrmlScene )
@@ -81,14 +81,14 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.clipOutsideSurfaceCheckBox.checked = False
     self.clipOutsideSurfaceCheckBox.setToolTip("If checked, voxel values will be filled outside the clipping ROI.")
     parametersFormLayout.addRow("Clip outside: ", self.clipOutsideSurfaceCheckBox)
-    
+
     # Fill value editor
     self.fillValueLabel = qt.QLabel("Fill value:")
     self.fillValueEdit = qt.QDoubleSpinBox()
     self.fillValueEdit.minimum = -32768
     self.fillValueEdit.maximum = 65535
-    parametersFormLayout.addRow(self.fillValueLabel, self.fillValueEdit)    
-    
+    parametersFormLayout.addRow(self.fillValueLabel, self.fillValueEdit)
+
     #
     # output volume selector
     #
@@ -102,7 +102,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.outputVolumeSelector.setMRMLScene( slicer.mrmlScene )
     self.outputVolumeSelector.setToolTip( "Clipped output volume. It may be the same as the input volume for cumulative clipping." )
     parametersFormLayout.addRow("Output Volume: ", self.outputVolumeSelector)
-    
+
     # Apply button
     self.applyButton = qt.QPushButton("Apply")
     self.applyButton.toolTip = "Clip volume with ROI"
@@ -115,20 +115,20 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.inputVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onInputVolumeSelect)
     self.clippingRoiSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onClippingRoiSelect)
     self.outputVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onOutputVolumeSelect)
-    
+
     # Define list of widgets for updateGUIFromParameterNode, updateParameterNodeFromGUI, and addGUIObservers
     self.valueEditWidgets = {"ClipOutsideSurface": self.clipOutsideSurfaceCheckBox, "FillValue": self.fillValueEdit}
     self.nodeSelectorWidgets = {"InputVolume": self.inputVolumeSelector, "ClippingRoi": self.clippingRoiSelector, "OutputVolume": self.outputVolumeSelector}
-    
+
     # Use singleton parameter node (it is created if does not exist yet)
     parameterNode = self.logic.getParameterNode()
     # Set parameter node (widget will observe it and also updates GUI)
     self.setAndObserveParameterNode(parameterNode)
-    
+
     self.addGUIObservers()
-    
+
     # Add vertical spacer
-    self.layout.addStretch(1)   
+    self.layout.addStretch(1)
 
   def setAndObserveParameterNode(self, parameterNode):
     if parameterNode == self.parameterNode and self.parameterNodeObserver:
@@ -144,7 +144,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
       self.parameterNodeObserver = self.parameterNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onParameterNodeModified)
     # Update GUI
     self.updateGUIFromParameterNode()
-    
+
   def getParameterNode(self):
     return self.parameterNode
 
@@ -205,13 +205,13 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
         self.valueEditWidgets[parameterName].connect("clicked()", self.updateParameterNodeFromGUI)
     for parameterName in self.nodeSelectorWidgets:
       self.nodeSelectorWidgets[parameterName].connect("currentNodeIDChanged(QString)", self.updateParameterNodeFromGUI)
-    
+
   def updateApplyButtonState(self):
     if self.clippingRoiSelector.currentNode() and self.inputVolumeSelector.currentNode() and self.outputVolumeSelector.currentNode():
       self.applyButton.enabled = True
     else:
-      self.applyButton.enabled = False      
-    
+      self.applyButton.enabled = False
+
   def onClippingRoiSelect(self, node):
     self.updateApplyButtonState()
 
@@ -220,7 +220,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
 
   def onOutputVolumeSelect(self, node):
     self.updateApplyButtonState()
-    
+
   def onApply(self):
     self.applyButton.text = "Working..."
     self.applyButton.repaint()
@@ -233,7 +233,7 @@ class VolumeClipWithRoiWidget(ScriptedLoadableModuleWidget):
     self.logic.clipVolumeWithRoi(clippingRoi, inputVolume, fillValue, clipOutsideSurface, outputVolume)
     self.logic.showInSliceViewers(outputVolume, ["Red", "Yellow", "Green"])
     self.applyButton.text = "Apply"
-    
+
 
 #
 # VolumeClipWithRoiLogic
@@ -246,7 +246,7 @@ class VolumeClipWithRoiLogic(ScriptedLoadableModuleLogic):
   this class and make use of the functionality without
   requiring an instance of the Widget
   """
-  
+
   def __init__(self, parent = None):
     ScriptedLoadableModuleLogic.__init__(self, parent)
 
@@ -257,28 +257,38 @@ class VolumeClipWithRoiLogic(ScriptedLoadableModuleLogic):
     node.SetParameter("ClipOutsideSurface", "1")
     node.SetParameter("FillValue", "0")
     return node
-  
+
   def clipVolumeWithRoi(self, roiNode, volumeNode, fillValue, clipOutsideSurface, outputVolume):
 
     # Create a box implicit function that will be used as a stencil to fill the volume
-    
-    roiBox = vtk.vtkBox()    
-    roiCenter = [0, 0, 0]
-    roiNode.GetXYZ( roiCenter )
-    roiRadius = [0, 0, 0]
-    roiNode.GetRadiusXYZ( roiRadius )
-    roiBox.SetBounds(roiCenter[0] - roiRadius[0], roiCenter[0] + roiRadius[0], roiCenter[1] - roiRadius[1], roiCenter[1] + roiRadius[1], roiCenter[2] - roiRadius[2], roiCenter[2] + roiRadius[2])
 
-    # Determine the transform between the box and the image IJK coordinate systems
-    
-    rasToBox = vtk.vtkMatrix4x4()    
-    if roiNode.GetTransformNodeID() != None:
-      roiBoxTransformNode = slicer.mrmlScene.GetNodeByID(roiNode.GetTransformNodeID())
-      boxToRas = vtk.vtkMatrix4x4()
-      roiBoxTransformNode.GetMatrixTransformToWorld(boxToRas)
-      rasToBox.DeepCopy(boxToRas)
-      rasToBox.Invert()
-      
+    roiBox = vtk.vtkBox()
+    rasToBox = vtk.vtkMatrix4x4()
+
+    # Determine the non-transformed ROI box and
+    # the transform between the box and the world coordinate systems
+
+    if roiNode.IsA("vtkMRMLMarkupsROINode"):
+      # Markups ROI node
+      roiDiameter = roiNode.GetSize()
+      roiBox.SetBounds(-roiDiameter[0]/2, roiDiameter[0]/2, -roiDiameter[1]/2, roiDiameter[1]/2, -roiDiameter[2]/2, roiDiameter[2]/2)
+      vtk.vtkMatrix4x4.Invert(roiNode.GetObjectToWorldMatrix(), rasToBox)
+    else:
+      # Legacy Annotation ROI node
+      roiCenter = [0, 0, 0]
+      roiNode.GetXYZ( roiCenter )
+      roiRadius = [0, 0, 0]
+      roiNode.GetRadiusXYZ( roiRadius )
+      roiBox.SetBounds(roiCenter[0] - roiRadius[0], roiCenter[0] + roiRadius[0], roiCenter[1] - roiRadius[1], roiCenter[1] + roiRadius[1], roiCenter[2] - roiRadius[2], roiCenter[2] + roiRadius[2])
+      if roiNode.GetTransformNodeID() != None:
+        roiBoxTransformNode = slicer.mrmlScene.GetNodeByID(roiNode.GetTransformNodeID())
+        boxToRas = vtk.vtkMatrix4x4()
+        roiBoxTransformNode.GetMatrixTransformToWorld(boxToRas)
+        rasToBox.DeepCopy(boxToRas)
+        rasToBox.Invert()
+
+    # Get transform between the box and volume IJK
+
     ijkToRas = vtk.vtkMatrix4x4()
     volumeNode.GetIJKToRASMatrix( ijkToRas )
 
@@ -289,9 +299,9 @@ class VolumeClipWithRoiLogic(ScriptedLoadableModuleLogic):
     roiBox.SetTransform(ijkToBoxTransform)
 
     # Use the stencil to fill the volume
-    
+
     imageData=volumeNode.GetImageData()
-    
+
     # Convert the implicit function to a stencil
     functionToStencil = vtk.vtkImplicitFunctionToImageStencil()
     functionToStencil.SetInput(roiBox)
@@ -314,7 +324,7 @@ class VolumeClipWithRoiLogic(ScriptedLoadableModuleLogic):
     # Update the volume with the stencil operation result
     outputImageData = vtk.vtkImageData()
     outputImageData.DeepCopy(stencilToImage.GetOutput())
-    
+
     outputVolume.SetAndObserveImageData(outputImageData);
     outputVolume.SetIJKToRASMatrix(ijkToRas)
 
@@ -323,8 +333,8 @@ class VolumeClipWithRoiLogic(ScriptedLoadableModuleLogic):
       displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
       displayNode.SetAndObserveColorNodeID("vtkMRMLColorTableNodeGrey")
       slicer.mrmlScene.AddNode(displayNode)
-      outputVolume.SetAndObserveDisplayNodeID(displayNode.GetID())    
-    
+      outputVolume.SetAndObserveDisplayNodeID(displayNode.GetID())
+
   def showInSliceViewers(self, volumeNode, sliceWidgetNames):
     # Displays volumeNode in the selected slice viewers as background volume
     # Existing background volume is pushed to foreground, existing foreground volume will not be shown anymore
@@ -344,7 +354,7 @@ class VolumeClipWithRoiLogic(ScriptedLoadableModuleLogic):
         sliceLogic.GetSliceCompositeNode().SetForegroundVolumeID(backgroundVolumeNodeID)
       # show the new volume as background
       sliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(newVolumeNodeID)
-    
+
 class VolumeClipWithRoiTest(ScriptedLoadableModuleTest):
   """
   This is the test case for your scripted module.
@@ -362,7 +372,7 @@ class VolumeClipWithRoiTest(ScriptedLoadableModuleTest):
     self.test_VolumeClipWithRoi1()
 
   def test_VolumeClipWithRoi1(self):
-    
+
     # Download MRHead from sample data
     import SampleData
     sampleDataLogic = SampleData.SampleDataLogic()
@@ -372,7 +382,7 @@ class VolumeClipWithRoiTest(ScriptedLoadableModuleTest):
     # Create output volume
     outputVolume = slicer.vtkMRMLScalarVolumeNode()
     slicer.mrmlScene.AddNode(outputVolume)
-    
+
     # Create clipping ROI
     roiNode = slicer.vtkMRMLAnnotationROINode()
     roiNode.SetXYZ(36, 17, -10)
@@ -381,8 +391,8 @@ class VolumeClipWithRoiTest(ScriptedLoadableModuleTest):
 
     fillValue = 17
     clipOutsideSurface = True
-    
+
     logic = VolumeClipWithRoiLogic()
     logic.clipVolumeWithRoi(roiNode, mrHeadVolume, fillValue, clipOutsideSurface, outputVolume)
-    
+
     self.delayDisplay("Test passed!")
